@@ -1,5 +1,5 @@
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import pickle as pk
 
 from keras.models import Sequential, model_from_json
@@ -147,7 +147,7 @@ class DustDCGAN(object):
     def __init__(self,load_state=False):
         #load list of dust maps
         dust_maps=[]
-        with open('/global/homes/k/kmaylor/cori/Maps_and_Makers/Planck_dust_cuts_353GHz.pk','rb') as f:
+        with open('D:\Projects\Maps_and_Makers/Planck_dust_cuts_353GHz.pk','rb') as f:
             while True:
                 try:
                     dust_maps.extend(pk.load(f))
@@ -203,31 +203,32 @@ class DustDCGAN(object):
             if save_interval>0:
                 if (i+1)%save_interval==0:
                     self.DCGAN.save_dcgan()
-                   # noise_input = np.random.normal(loc=0., scale=1., size=[16, 100])
-                   # filename = "Dust_sims_%d.png" % step
-                   # self.plot_images(filename=filename, samples=noise_input.shape[0],noise=noise_input)
+                    noise_input = np.random.normal(loc=0., scale=1., size=[16, 100])
+                    filename = "Dust_sims_%d.png" % (i+1)
+                    self.plot_images(filename=filename, samples=noise_input.shape[0],noise=noise_input)
 
-    #def plot_images(self, filename=None, fake=True, samples=16, noise=None):
-    #    if fake:
-    #        if noise is None:
-    #            noise = np.random.uniform(-1.0, 1.0, size=[samples, 100])
-    #        images = self.generator.predict(noise)
-    #    else:
-    #        i = np.random.randint(0, self.x_train.shape[0], samples)
-    #        images = self.x_train[i, :, :, :]
-#
-    #    plt.figure(figsize=(10,10))
-    #    for i in range(images.shape[0]):
-    #        plt.subplot(4, 4, i+1)
-    #        image = images[i, :, :, :]
-    #        image = np.reshape(image, [self.img_rows, self.img_cols])
-    #        plt.imshow(image, cmap='viridis')
-    #        plt.axis('off')
-    #    plt.tight_layout()
-    #    if filename!=None:
-    #        plt.savefig(filename)
-    #        plt.close('all')
-    #    else:
-    #        plt.show()
+    def plot_images(self, filename=None, fake=True, samples=16, noise=None):
+        if fake:
+            if noise is None:
+                noise = np.random.uniform(-1.0, 1.0, size=[samples, 100])
+            images = self.generator.predict(noise)
+        else:
+            i = np.random.randint(0, self.x_train.shape[0], samples)
+            images = self.x_train[i, :, :, :]
+
+        plt.figure(figsize=(10,10))
+        for i in range(images.shape[0]):
+            plt.subplot(4, 4, i+1)
+            image = images[i, :, :, :]
+            image = np.reshape(image, [self.img_rows, self.img_cols])
+            plt.imshow(image, cmap='viridis')
+            plt.axis('off')
+        plt.tight_layout()
+        if filename!=None:
+            plt.savefig(filename)
+            plt.close('all')
+        else:
+            plt.show()
+
             
     
