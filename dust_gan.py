@@ -1,5 +1,5 @@
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import pickle as pk
 
 from keras.models import Sequential, model_from_json
@@ -30,7 +30,7 @@ class DCGAN(object):
         if self.D:
             return self.D
         self.D = Sequential()
-        depth = 64
+        depth = 16
         dropout = 0.6
         
         input_shape = (self.img_rows, self.img_cols, self.channel)
@@ -71,7 +71,7 @@ class DCGAN(object):
             return self.G
         self.G = Sequential()
         dropout = 0.6
-        depth = 64
+        depth = 16
         dim1 = 29
         dim2 = 38
         
@@ -147,7 +147,7 @@ class DustDCGAN(object):
     def __init__(self,load_state=False):
         #load list of dust maps
         dust_maps=[]
-        with open('/global/homes/k/kmaylor/cori/Maps_and_Makers/Planck_dust_cuts_353GHz.pk','rb') as f:
+        with open('D:\Projects\Maps_and_Makers/Planck_dust_cuts_353GHz.pk','rb') as f:
             while True:
                 try:
                     dust_maps.extend(pk.load(f))
@@ -203,9 +203,9 @@ class DustDCGAN(object):
             if save_interval>0:
                 if (i+1)%save_interval==0:
                     self.DCGAN.save_dcgan()
-                    #noise_input = np.random.normal(loc=0., scale=1., size=[16, 100])
-                    #filename = "Dust_sims_%d.png" % step
-                    #self.plot_images(filename=filename, samples=noise_input.shape[0],noise=noise_input)
+                    noise_input = np.random.normal(loc=0., scale=1., size=[16, 100])
+                    filename = "Dust_sims_%d.png" % (i+1)
+                    self.plot_images(filename=filename, samples=noise_input.shape[0],noise=noise_input)
 
     def plot_images(self, filename=None, fake=True, samples=16, noise=None):
         if fake:
