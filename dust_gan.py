@@ -8,6 +8,7 @@ from keras.layers import Conv2D, Conv2DTranspose, Cropping2D
 from keras.layers import LeakyReLU, Dropout
 from keras.layers import BatchNormalization
 from keras.optimizers import Adam, RMSprop
+from keras.backend import log
 
 class DCGAN(object):
     def __init__(self, load_state =False, img_rows=900, img_cols=1200, channel=1):
@@ -120,10 +121,17 @@ class DCGAN(object):
         optimizer = RMSprop(lr=0.0001, decay=3e-8)
         self.AM = Sequential()
         self.AM.add(self.generator())
-        self.AM.add(self.discriminator())
+        discriminator =self.discriminator_model()
+        discriminator.trainable=False
+        self.AM.add(discriminator)
         self.AM.compile(loss='binary_crossentropy', optimizer=optimizer,\
             metrics=['accuracy'])
         return self.AM
+    
+    def create_adv_loss(self):
+            def loss(y_true, y_pred):
+                return log(1.0 - self.DM.predict(y_pred))
+            return loss
 
     def save_dcgan(self):
         model_type = ['D', 'G', 'AM','DM']
@@ -144,39 +152,48 @@ class DCGAN(object):
             model.load_weights(m+"_weights.h5")
             
 class DustDCGAN(object):
-    def __init__(self,load_state=False):
-        #load list of dust maps
-        dust_maps=[]
-        with open('D:\Projects\Maps_and_Makers/Planck_dust_cuts_353GHz.pk','rb') as f:
-            while True:
-                try:
-                    dust_maps.extend(pk.load(f))
-                except EOFError:
-                    break
+    def __init__(self,data,test=False,load_state=False):
         
-        self.img_rows,self.img_cols = np.shape(dust_maps[0]) 
-        self.channel = 1
-        
-        #normalize dust maps across entire set
-        dmin = np.min(dust_maps)
-        dmax = np.max(dust_maps)
-        self.x_train = (dust_maps - dmin)/(dmax-dmin)
-        
-        # don't need the unormalized maps
-        del dust_maps
-        
-        #format the training data, for 2d images keras expects one dim to be the num of channels
-        #first dim is number of training samples, then image shape, then channels
-        self.x_train=np.array(self.x_train)
-        self.x_train = self.x_train.reshape(-1, self.img_rows,\
-            self.img_cols, 1).astype(np.float32)
         #initialize the discriminator, adversarial models and the generator
         self.DCGAN = DCGAN(load_state=load_state)
         self.discriminator =  self.DCGAN.discriminator_model()
         self.adversarial = self.DCGAN.adversarial_model()
         self.generator = self.DCGAN.generator()
+        crap
+        if not test:
+            print('Loading Data')
+            #load list of dust maps
+            dust_maps=[]
+            with open(data,'rb') as f:
+                while True:
+                    try:
+                        dust_maps.extend(pk.load(f))
+                    except EOFError:
+                        break
+        
+            self.img_rows,self.img_cols = np.shape(dust_maps[0]) 
+            self.channel = 1
+        
+            #normalize dust maps across entire set
+            dmin = np.min(dust_maps)
+            dmax = np.max(dust_maps)
+            self.x_train = (dust_maps - dmin)/(dmax-dmin)
+        
+            # don't need the unormalized maps
+            del dust_maps
+        
+            #format the training data, for 2d images keras expects one dim to be the num of channels
+            #first dim is number of training samples, then image shape, then channels
+            self.x_train=np.array(self.x_train)
+            self.x_train = self.x_train.reshape(-1, self.img_rows,\
+            self.img_cols, 1).astype(np.float32)
+        else:
+            print('Summary')
+            print(self.discriminator.summary())
+            print(self.adversarial.summary())
 
     def train(self, train_steps=2000, batch_size=25, save_interval=0):
+        print('Training Beginning')
         for i in range(train_steps):
             # First train the discriminator with correct labels
             # Randomly select batch from training samples
