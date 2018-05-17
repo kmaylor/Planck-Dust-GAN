@@ -11,7 +11,7 @@ from keras.optimizers import Adam
 from keras.backend import log
 
 class DCGAN(object):
-    def __init__(self, load_state =False, img_rows=900, img_cols=1200, channel=1):
+    def __init__(self, load_state =False, img_rows=600, img_cols=600, channel=1):
 
         self.img_rows = img_rows
         self.img_cols = img_cols
@@ -54,11 +54,6 @@ class DCGAN(object):
         self.D.add(BatchNormalization(momentum=0.9))
         self.D.add(LeakyReLU(alpha=0.2))
         self.D.add(Dropout(dropout))
-        
-        self.D.add(Conv2D(depth*16, 5, strides=2, padding='same'))
-        self.D.add(BatchNormalization(momentum=0.9))
-        self.D.add(LeakyReLU(alpha=0.2))
-        self.D.add(Dropout(dropout))
 
         # Out: 1-dim probability
         self.D.add(Flatten())
@@ -73,19 +68,13 @@ class DCGAN(object):
         self.G = Sequential()
         dropout = 0.6
         depth = 64
-        dim1 = 29
+        dim1 = 38
         dim2 = 38
         
-        self.G.add(Dense(dim1*dim2*depth*16, input_dim=100))
+        self.G.add(Dense(dim1*dim2*depth*16, input_dim=64))
         self.G.add(BatchNormalization(momentum=0.9))
         self.G.add(Activation('relu'))
         self.G.add(Reshape((dim1, dim2, depth*16)))
-        
-
-        
-        self.G.add(Conv2DTranspose(depth*8, 5, strides = 2, padding='same'))
-        self.G.add(BatchNormalization(momentum=0.9))
-        self.G.add(Activation('relu'))
 
         self.G.add(Conv2DTranspose(depth*4, 5, strides = 2, padding='same'))
         self.G.add(BatchNormalization(momentum=0.9))
@@ -100,7 +89,7 @@ class DCGAN(object):
         self.G.add(Activation('relu'))
 
         self.G.add(Conv2DTranspose(1, 5, strides = 2, padding='same'))
-        self.G.add(Cropping2D(cropping=((14,14),(8,8))))
+        self.G.add(Cropping2D(cropping=((4,4),(4,4))))
         self.G.add(Activation('tanh'))
         self.G.summary()
         return self.G
@@ -127,11 +116,6 @@ class DCGAN(object):
         self.AM.compile(loss='binary_crossentropy', optimizer=optimizer,\
             metrics=['accuracy'])
         return self.AM
-    
-    def create_adv_loss(self):
-            def loss(y_true, y_pred):
-                return log(1.0 - self.DM.predict(y_pred))
-            return loss
 
     def save_dcgan(self):
         model_type = ['D', 'G', 'AM','DM']
@@ -154,12 +138,6 @@ class DCGAN(object):
 class DustDCGAN(object):
     def __init__(self,data,test=False,load_state=False):
         
-        #initialize the discriminator, adversarial models and the generator
-        self.DCGAN = DCGAN(load_state=load_state)
-        self.discriminator =  self.DCGAN.discriminator_model()
-        self.adversarial = self.DCGAN.adversarial_model()
-        self.generator = self.DCGAN.generator()
-       
         if not test:
             print('Loading Data')
             #load list of dust maps
@@ -187,12 +165,23 @@ class DustDCGAN(object):
             self.x_train=np.array(self.x_train)
             self.x_train = self.x_train.reshape(-1, self.img_rows,\
             self.img_cols, 1).astype(np.float32)
+            
+            ##initialize the discriminator, adversarial models and the generator
+            self.DCGAN = DCGAN(load_state=load_state, img_rows=self.img_rows, img_cols=self.img_cols)
+            self.discriminator =  self.DCGAN.discriminator_model()
+            self.adversarial = self.DCGAN.adversarial_model()
+            self.generator = self.DCGAN.generator()
         else:
+            ##initialize the discriminator, adversarial models and the generator
+            self.DCGAN = DCGAN(load_state=load_state, img_rows=600, img_cols=600)
+            self.discriminator =  self.DCGAN.discriminator_model()
+            self.adversarial = self.DCGAN.adversarial_model()
+            self.generator = self.DCGAN.generator()
             print('Summary')
             print(self.discriminator.summary())
             print(self.adversarial.summary())
 
-    def train(self, train_steps=2000, batch_size=25, save_interval=0):
+    def train(self, train_steps=2000, batch_size=32, save_interval=0):
         print('Training Beginning')
         for i in range(train_steps):
             # First train the discriminator with correct labels
@@ -200,7 +189,7 @@ class DustDCGAN(object):
             images_train = self.x_train[np.random.randint(0,
                 self.x_train.shape[0], size=batch_size), :, :, :]
             # Generate fake images from generator
-            noise = np.random.normal(loc=0., scale=1., size=[batch_size, 100])
+            noise = np.random.normal(loc=0., scale=1., size=[batch_size, 64])
             images_fake = self.generator.predict(noise)
             # Combine true and false sets with correct labels and train discriminator
             x = np.concatenate((images_train, images_fake))
@@ -210,7 +199,7 @@ class DustDCGAN(object):
             # Now train the adversarial network
             # Create new fake images labels as if they are from the training set
             y = np.ones([batch_size, 1])
-            noise = np.random.uniform(-1.0, 1.0, size=[batch_size, 100])
+            noise = np.random.uniform(-1.0, 1.0, size=[batch_size, 64])
             a_loss = self.adversarial.train_on_batch(noise, y)
             # Generate log messages
             log_mesg = "%d: [D loss: %f, acc: %f]" % (i, d_loss[0], d_loss[1])
@@ -220,14 +209,14 @@ class DustDCGAN(object):
             if save_interval>0:
                 if (i+1)%save_interval==0:
                     self.DCGAN.save_dcgan()
-                    noise_input = np.random.normal(loc=0., scale=1., size=[16, 100])
+                    noise_input = np.random.normal(loc=0., scale=1., size=[16, 64])
                     filename = "Dust_sims_%d.png" % (i+1)
                     self.plot_images(filename=filename, samples=noise_input.shape[0],noise=noise_input)
 
     def plot_images(self, filename=None, fake=True, samples=16, noise=None):
         if fake:
             if noise is None:
-                noise = np.random.uniform(-1.0, 1.0, size=[samples, 100])
+                noise = np.random.uniform(-1.0, 1.0, size=[samples, 64])
             images = self.generator.predict(noise)
         else:
             i = np.random.randint(0, self.x_train.shape[0], samples)
