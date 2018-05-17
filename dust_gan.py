@@ -97,7 +97,7 @@ class DCGAN(object):
     def discriminator_model(self):
         if self.DM:
             return self.DM
-        optimizer = Adam(lr=0.0002,beta_1=0.5, decay=6e-8)
+        optimizer = Adam(lr=0.0001,beta_1=0.5, decay=6e-8)
         self.DM = Sequential()
         self.DM.add(self.discriminator())
         self.DM.compile(loss='binary_crossentropy', optimizer=optimizer,\
@@ -107,7 +107,7 @@ class DCGAN(object):
     def adversarial_model(self):
         if self.AM:
             return self.AM
-        optimizer = Adam(lr=0.0002,beta_1=0.5, decay=6e-8)
+        optimizer = Adam(lr=0.0004,beta_1=0.5, decay=6e-8)
         self.AM = Sequential()
         self.AM.add(self.generator())
         discriminator =self.discriminator_model()
@@ -199,7 +199,7 @@ class DustDCGAN(object):
             # Now train the adversarial network
             # Create new fake images labels as if they are from the training set
             y = np.ones([batch_size, 1])
-            noise = np.random.uniform(-1.0, 1.0, size=[batch_size, 64])
+            noise = np.random.normal(loc=0., scale=1., size=[batch_size, 64])
             a_loss = self.adversarial.train_on_batch(noise, y)
             # Generate log messages
             log_mesg = "%d: [D loss: %f, acc: %f]" % (i, d_loss[0], d_loss[1])
@@ -216,7 +216,7 @@ class DustDCGAN(object):
     def plot_images(self, filename=None, fake=True, samples=16, noise=None):
         if fake:
             if noise is None:
-                noise = np.random.uniform(-1.0, 1.0, size=[samples, 64])
+                noise = np.random.normal(loc=0., scale=1., size=[samples, 64])
             images = self.generator.predict(noise)
         else:
             i = np.random.randint(0, self.x_train.shape[0], samples)
