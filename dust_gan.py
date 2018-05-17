@@ -7,7 +7,7 @@ from keras.layers import Dense, Activation, Flatten, Reshape
 from keras.layers import Conv2D, Conv2DTranspose, Cropping2D
 from keras.layers import LeakyReLU, Dropout
 from keras.layers import BatchNormalization
-from keras.optimizers import Adam, RMSprop
+from keras.optimizers import Adam
 from keras.backend import log
 
 class DCGAN(object):
@@ -80,7 +80,7 @@ class DCGAN(object):
         self.G.add(BatchNormalization(momentum=0.9))
         self.G.add(Activation('relu'))
         self.G.add(Reshape((dim1, dim2, depth*16)))
-        self.G.add(Dropout(dropout))
+        
 
         
         self.G.add(Conv2DTranspose(depth*8, 5, strides = 2, padding='same'))
@@ -108,7 +108,7 @@ class DCGAN(object):
     def discriminator_model(self):
         if self.DM:
             return self.DM
-        optimizer = RMSprop(lr=0.0002, decay=6e-8)
+        optimizer = Adam(lr=0.0002,beta_1=0.5, decay=6e-8)
         self.DM = Sequential()
         self.DM.add(self.discriminator())
         self.DM.compile(loss='binary_crossentropy', optimizer=optimizer,\
@@ -118,7 +118,7 @@ class DCGAN(object):
     def adversarial_model(self):
         if self.AM:
             return self.AM
-        optimizer = RMSprop(lr=0.0001, decay=3e-8)
+        optimizer = Adam(lr=0.0002,beta_1=0.5, decay=6e-8)
         self.AM = Sequential()
         self.AM.add(self.generator())
         discriminator =self.discriminator_model()
@@ -159,7 +159,7 @@ class DustDCGAN(object):
         self.discriminator =  self.DCGAN.discriminator_model()
         self.adversarial = self.DCGAN.adversarial_model()
         self.generator = self.DCGAN.generator()
-        crap
+       
         if not test:
             print('Loading Data')
             #load list of dust maps
