@@ -21,6 +21,7 @@ class DCGAN(object):
         self.AM = None  # adversarial model
         self.DM = None  # discriminator model
         if load_state:
+            print('Loading Previous State')
             try:
                 self.load_dcgan()
             except IOError:
@@ -32,7 +33,7 @@ class DCGAN(object):
             return self.D
         self.D = Sequential()
         depth = 64
-        dropout = 0.6
+        dropout = 0.25
         
         input_shape = (self.img_rows, self.img_cols, self.channel)
         self.D.add(Conv2D(depth, 5, strides=2, input_shape=input_shape,\
@@ -55,6 +56,11 @@ class DCGAN(object):
         self.D.add(LeakyReLU(alpha=0.2))
         self.D.add(Dropout(dropout))
 
+        self.D.add(Conv2D(depth*16, 5, strides=2, padding='same'))
+        self.D.add(BatchNormalization(momentum=0.9))
+        self.D.add(LeakyReLU(alpha=0.2))
+        self.D.add(Dropout(dropout))
+
         # Out: 1-dim probability
         self.D.add(Flatten())
         self.D.add(Dense(1))
@@ -66,15 +72,18 @@ class DCGAN(object):
         if self.G:
             return self.G
         self.G = Sequential()
-        dropout = 0.6
         depth = 64
-        dim1 = 38
-        dim2 = 38
+        dim1 = 19
+        dim2 = 19
         
         self.G.add(Dense(dim1*dim2*depth*16, input_dim=64))
         self.G.add(BatchNormalization(momentum=0.9))
         self.G.add(Activation('relu'))
         self.G.add(Reshape((dim1, dim2, depth*16)))
+
+        self.G.add(Conv2DTranspose(depth*8, 5, strides = 2, padding='same'))
+        self.G.add(BatchNormalization(momentum=0.9))
+        self.G.add(Activation('relu'))
 
         self.G.add(Conv2DTranspose(depth*4, 5, strides = 2, padding='same'))
         self.G.add(BatchNormalization(momentum=0.9))
@@ -97,7 +106,7 @@ class DCGAN(object):
     def discriminator_model(self):
         if self.DM:
             return self.DM
-        optimizer = Adam(lr=0.0001,beta_1=0.5, decay=6e-8)
+        optimizer = Adam(lr=0.0001,beta_1=0.5, decay=6e-10)
         self.DM = Sequential()
         self.DM.add(self.discriminator())
         self.DM.compile(loss='binary_crossentropy', optimizer=optimizer,\
@@ -107,7 +116,7 @@ class DCGAN(object):
     def adversarial_model(self):
         if self.AM:
             return self.AM
-        optimizer = Adam(lr=0.0004,beta_1=0.5, decay=6e-8)
+        optimizer = Adam(lr=0.0002,beta_1=0.5, decay=6e-10)
         self.AM = Sequential()
         self.AM.add(self.generator())
         discriminator =self.discriminator_model()
@@ -153,9 +162,9 @@ class DustDCGAN(object):
             self.channel = 1
         
             #normalize dust maps across entire set
-            dmin = np.min(dust_maps)
-            dmax = np.max(dust_maps)
-            self.x_train = (dust_maps - dmin)/(dmax-dmin)
+            dmean = np.mean(dust_maps)
+            dstd = np.std(dust_maps)
+            self.x_train = (dust_maps - dmean)/dstd
         
             # don't need the unormalized maps
             del dust_maps
@@ -192,10 +201,13 @@ class DustDCGAN(object):
             noise = np.random.normal(loc=0., scale=1., size=[batch_size, 64])
             images_fake = self.generator.predict(noise)
             # Combine true and false sets with correct labels and train discriminator
-            x = np.concatenate((images_train, images_fake))
-            y = np.ones([2*batch_size, 1])
-            y[batch_size:, :] = 0
-            d_loss = self.discriminator.train_on_batch(x, y)
+            #x = np.concatenate((images_train, images_fake))
+            y = np.random.binomial(1,.99,size=[batch_size, 1])
+            #y[batch_size:, :] =np.random.binomial(1,.1,size=[batch_size, 1])
+            d_loss_real = self.discriminator.train_on_batch(images_train, y)
+            y =np.random.binomial(1,.01,size=[batch_size, 1])
+            d_loss_fake = self.discriminator.train_on_batch(images_fake,y)
+            d_loss = np.add(d_loss_fake,d_loss_real)/2
             # Now train the adversarial network
             # Create new fake images labels as if they are from the training set
             y = np.ones([batch_size, 1])
@@ -204,7 +216,7 @@ class DustDCGAN(object):
             # Generate log messages
             log_mesg = "%d: [D loss: %f, acc: %f]" % (i, d_loss[0], d_loss[1])
             log_mesg = "%s  [A loss: %f, acc: %f]" % (log_mesg, a_loss[0], a_loss[1])
-            if i%50==0:
+            if i%10==0:
                 print(log_mesg)
             if save_interval>0:
                 if (i+1)%save_interval==0:
