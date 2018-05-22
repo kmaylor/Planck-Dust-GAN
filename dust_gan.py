@@ -1,7 +1,20 @@
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pickle as pk
 
+from keras import backend as K
+import os
+
+def set_keras_backend(backend):
+
+    if K.backend() != backend:
+        os.environ['KERAS_BACKEND'] = backend
+        reload(K)
+        assert K.backend() == backend
+
+set_keras_backend("tensorflow")
 from keras.models import Sequential, model_from_json
 from keras.layers import Dense, Activation, Flatten, Reshape
 from keras.layers import Conv2D, Conv2DTranspose, Cropping2D
@@ -18,8 +31,8 @@ class DCGAN(object):
         self.channel = channel
         self.D = None   # discriminator
         self.G = None   # generator
-        self.AM = None  # adversarial model
         self.DM = None  # discriminator model
+        self.AM = None  # adversarial model
         if load_state:
             print('Loading Previous State')
             try:
@@ -127,7 +140,7 @@ class DCGAN(object):
         return self.AM
 
     def save_dcgan(self):
-        model_type = ['D', 'G', 'AM','DM']
+        model_type = ['D', 'G', 'DM','AM']
         for m in model_type:
             model = getattr(self, m)
             # serialize model to JSON
@@ -136,7 +149,7 @@ class DCGAN(object):
             model.save_weights(m+"_weights.h5")
             
     def load_dcgan(self):
-        model_type = ['D', 'G', 'AM','DM']
+        model_type = ['D', 'G', 'DM','AM']
         for m in model_type:
             model = getattr(self, m)
             # load json and create model
@@ -177,15 +190,17 @@ class DustDCGAN(object):
             
             ##initialize the discriminator, adversarial models and the generator
             self.DCGAN = DCGAN(load_state=load_state, img_rows=self.img_rows, img_cols=self.img_cols)
+            self.generator = self.DCGAN.generator()
             self.discriminator =  self.DCGAN.discriminator_model()
             self.adversarial = self.DCGAN.adversarial_model()
-            self.generator = self.DCGAN.generator()
+            
         else:
             ##initialize the discriminator, adversarial models and the generator
             self.DCGAN = DCGAN(load_state=load_state, img_rows=600, img_cols=600)
+            self.generator = self.DCGAN.generator()
             self.discriminator =  self.DCGAN.discriminator_model()
             self.adversarial = self.DCGAN.adversarial_model()
-            self.generator = self.DCGAN.generator()
+            
             print('Summary')
             print(self.discriminator.summary())
             print(self.adversarial.summary())
