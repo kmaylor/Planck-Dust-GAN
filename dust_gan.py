@@ -1,20 +1,21 @@
+print('Importing necessary packages and modules')
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pickle as pk
 
-from keras import backend as K
-import os
+#from keras import backend as K
+#import os
 
-def set_keras_backend(backend):
+#def set_keras_backend(backend):
 
-    if K.backend() != backend:
-        os.environ['KERAS_BACKEND'] = backend
-        reload(K)
-        assert K.backend() == backend
+#    if K.backend() != backend:
+#        os.environ['KERAS_BACKEND'] = backend
+#        reload(K)
+#        assert K.backend() == backend
 
-set_keras_backend("tensorflow")
+#set_keras_backend("tensorflow")
 from keras.models import Sequential, model_from_json
 from keras.layers import Dense, Activation, Flatten, Reshape
 from keras.layers import Conv2D, Conv2DTranspose, Cropping2D
@@ -216,9 +217,7 @@ class DustDCGAN(object):
             noise = np.random.normal(loc=0., scale=1., size=[batch_size, 64])
             images_fake = self.generator.predict(noise)
             # Combine true and false sets with correct labels and train discriminator
-            #x = np.concatenate((images_train, images_fake))
             y = np.random.binomial(1,.99,size=[batch_size, 1])
-            #y[batch_size:, :] =np.random.binomial(1,.1,size=[batch_size, 1])
             d_loss_real = self.discriminator.train_on_batch(images_train, y)
             y =np.random.binomial(1,.01,size=[batch_size, 1])
             d_loss_fake = self.discriminator.train_on_batch(images_fake,y)
