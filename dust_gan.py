@@ -8,8 +8,8 @@ from kgan import KGAN
 class DustDCGAN(object):
     def __init__(self,data,test=False,load_state=False):
         
-        kernels = [10,8,4,2]
-        strides = [5,4,2,1]#[8,5,3,1]
+        kernels = [4,4,4,4]
+        strides = [2,2,2,1]
 
         if not test:
             print('Loading Data')
@@ -21,7 +21,7 @@ class DustDCGAN(object):
                         dust_maps.extend(pk.load(f))
                     except EOFError:
                         break
-        
+            dust_maps = np.reshape(dust_maps,(-1,30,30))
             self.img_rows,self.img_cols = np.shape(dust_maps[0]) 
             self.channel = 1
         
@@ -40,17 +40,16 @@ class DustDCGAN(object):
             self.img_cols, 1).astype(np.float32)
             
             ##initialize the discriminator, adversarial models and the generator
-            self.KGAN = KGAN(img_rows=self.img_rows, img_cols=self.img_cols, load_dir=None)
-            self.KGAN.strides = strides
-            self.KGAN.kernels = kernels
-            self.KGAN.depth_scale = [8,4,2,1][::-1]
+            self.KGAN = KGAN(strides=strides,kernels=kernels,img_rows=self.img_rows, img_cols=self.img_cols, load_dir=None)
+            
+            #self.KGAN.depth_scale = [6,4,2,1][::-1]
             
         else:
             ##initialize the discriminator, adversarial models and the generator
             self.KGAN = KGAN(img_rows=600, img_cols=600, load_dir=None)
             self.KGAN.strides = strides
             self.KGAN.kernels = kernels
-            self.KGAN.depth_scale = [2,2,2,2,1][::-1]
+            self.KGAN.depth_scale = [2,2,2,1][::-1]
             print('Summary')
             self.KGAN.discriminator()
             self.KGAN.generator()
@@ -59,7 +58,7 @@ class DustDCGAN(object):
             print('AM',self.KGAN.get_model_memory_usage(16,'AM'))
             print('DM',self.KGAN.get_model_memory_usage(16,'DM'))
 
-    def train(self, train_steps=2000, save_interval=100, verbose = 10, batch_size=16):
+    def train(self, train_steps=2000, save_interval=100, verbose = 10, batch_size=32):
         self.KGAN.train(self.x_train, 'Gen_images/Dust_sims',train_steps=train_steps,
          batch_size=batch_size, save_interval=save_interval, verbose = verbose)
 
