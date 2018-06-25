@@ -21,7 +21,7 @@ class DustDCGAN(object):
                         dust_maps.extend(pk.load(f))
                     except EOFError:
                         break
-            dust_maps = np.reshape(dust_maps,(-1,30,30))
+            dust_maps = np.log(dust_maps)
             self.img_rows,self.img_cols = np.shape(dust_maps[0]) 
             self.channel = 1
         
