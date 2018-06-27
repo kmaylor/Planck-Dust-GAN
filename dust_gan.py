@@ -8,8 +8,8 @@ from kgan import KGAN
 class DustDCGAN(object):
     def __init__(self,data,test=False,load_state=False):
         
-        kernels = [4,4,4,4]
-        strides = [2,2,2,1]
+        kernels = [10,4,4]
+        strides = [10,4,2]
 
         if not test:
             print('Loading Data')
@@ -21,7 +21,7 @@ class DustDCGAN(object):
                         dust_maps.extend(pk.load(f))
                     except EOFError:
                         break
-            dust_maps = np.reshape(dust_maps,(-1,30,30))
+            
             self.img_rows,self.img_cols = np.shape(dust_maps[0]) 
             self.channel = 1
         
