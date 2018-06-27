@@ -12,36 +12,10 @@ class DustDCGAN(object):
         strides = [10,4,2]
 
         if not test:
-            print('Loading Data')
-            #load list of dust maps
-            dust_maps=[]
-            with open(data,'rb') as f:
-                while True:
-                    try:
-                        dust_maps.extend(pk.load(f))
-                    except EOFError:
-                        break
-            
-            dust_maps = np.log(dust_maps)
-            self.img_rows,self.img_cols = np.shape(dust_maps[0]) 
-            self.channel = 1
-        
-            #normalize dust maps across entire set
-            dmean = np.mean(dust_maps)
-            dstd = np.std(dust_maps)
-            self.x_train = (dust_maps - dmean)/dstd
-        
-            # don't need the unormalized maps
-            del dust_maps
-        
-            #format the training data, for 2d images keras expects one dim to be the num of channels
-            #first dim is number of training samples, then image shape, then channels
-            self.x_train=np.array(self.x_train)
-            self.x_train = self.x_train.reshape(-1, self.img_rows,\
-            self.img_cols, 1).astype(np.float32)
             
             ##initialize the discriminator, adversarial models and the generator
-            self.KGAN = KGAN(strides=strides,kernels=kernels,img_rows=self.img_rows, img_cols=self.img_cols, load_dir=None)
+            self.KGAN = KGAN(strides=strides,kernels=kernels,img_rows=self.img_rows,
+             img_cols=self.img_cols, load_dir=None)
             
             #self.KGAN.depth_scale = [6,4,2,1][::-1]
             
@@ -64,4 +38,11 @@ class DustDCGAN(object):
          batch_size=batch_size, save_interval=save_interval, verbose = verbose)
 
             
-    
+    def gen_batch(batch_size):
+        batch=[]
+        with h5py.File('Planck_dust_cuts_353GHz_norm_log.h5', 'r') as hf:
+            for i in range(batch_size):
+                group = np.random.randint(0,len(hf.keys()))
+                map_group =  hf.get(str(group))
+                batch.append(map_group[np.random.randint(0,len(map_group))])
+        return np.array(batch).reshape(-1, self.img_rows, self.img_cols, 1).astype(np.float32)
