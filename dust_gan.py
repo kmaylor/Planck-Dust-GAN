@@ -1,21 +1,22 @@
 import numpy as np
-import pickle as pk
+import h5py
 from kgan import KGAN
 
 
 
 
 class DustDCGAN(object):
-    def __init__(self,data,test=False,load_state=False):
+    def __init__(self,data,test=False,load_dir=None):
         
         kernels = [10,4,4]
         strides = [10,4,2]
 
         if not test:
-            
+            with h5py.File('Planck_dust_cuts_353GHz_norm_log.h5', 'r') as hf:
+                self.x_train = np.array([i for i in hf.values()]).reshape(-1, 900, 900, 1).astype(np.float32)
             ##initialize the discriminator, adversarial models and the generator
-            self.KGAN = KGAN(strides=strides,kernels=kernels,img_rows=self.img_rows,
-             img_cols=self.img_cols, load_dir=None)
+            self.KGAN = KGAN(strides=strides,kernels=kernels,img_rows=900,
+             img_cols=900, load_dir=None)
             
             #self.KGAN.depth_scale = [6,4,2,1][::-1]
             
