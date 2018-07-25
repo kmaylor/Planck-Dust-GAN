@@ -6,18 +6,20 @@ from KGAN.kgan import KGAN
 
 
 class DustDCGAN(object):
-    def __init__(self,data,test=False,load_dir=None):
+    def __init__(self,data,test=False,load_dir=None,save_dir='Saved_Models'):
         
-        #kernels = [4,4,4,4,2]
-        #strides = [4,4,4,2,1]
-        kernels = [10,4,4]
-        strides = [10,4,2]
+        #kernels = [10,8,8,4]
+        #strides = [5,4,4,2]
+        #kernels = [10,4,4]
+        #strides = [10,4,2]
+        kernels = [5,4,4,4]
+        strides = [5,4,2,2]
         if not test:
             with h5py.File(data, 'r') as hf:
                 self.x_train = np.array([i for i in hf.values()]).reshape(-1, 900, 900, 1).astype(np.float32)
             ##initialize the discriminator, adversarial models and the generator
             self.KGAN = KGAN(strides=strides,kernels=kernels,img_rows=900,
-             img_cols=900, load_dir=None, gpus = 2)
+             img_cols=900, load_dir=load_dir,save_dir=save_dir,gpus = 2)
 
             
             #self.KGAN.depth_scale = [6,4,2,1][::-1]
