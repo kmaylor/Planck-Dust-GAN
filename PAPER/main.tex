@@ -102,11 +102,11 @@ Developments in modeling via neural networks and the availability of powerful co
 
 \section{Generative Adversarial Network}
 
-A Deep Convolutional Generative Adversarial Network (DCGAN) is a form of unsupervised machine learning which attempts to model a generating function which can create samples from a desired distribution. The DCGAN architecture was first introduced in the seminal paper, \cite{goodfellow14}.
-A DCGAN consists of two sub-models, a discriminator and a generator, each with their own sets of weights that are to be optimized.
-The discriminator is optimized to detect samples from $P$ and the generator is optimized to create samples from $P$.
+A Generative Adversarial Network (GAN) is a form of unsupervised machine learning which attempts to model a generating function which can create samples from a desired distribution \citep{goodfellow14}. 
+A GAN consists of two sub-models, a discriminator and a generator, each with their own sets of weights that are to be optimized.
+The discriminator is optimized to detect samples from $P$, the distribution which we desire to emulate, and the generator is optimized to create samples from $P$.
 During the training process the discriminator is shown labeled samples from $P$ and from the generator, as the discriminator improves at detecting samples from $P$ the generator must improve at creating samples belonging to $P$ to minimize its own loss function. Training proceeds until the generator's output distribution has converged to $P$.
-For the case of generating $N\times M$ pixel images, the generator $\rm{G}(z)$ maps $z$, a random vector from $Z$, to $P$ in $\mathbb{R}^{N\times M}$. 
+For the case of generating $N\times M$ pixel images a Deep Convolutional GAN (DCGAN), first presented in \cite{radford15}, has proven to be effective. In this architecture the generator $\rm{G}(z)$ maps $z$, a random vector from $Z$, to $P$ in $\mathbb{R}^{N\times M}$ through a series of upsamplings via convolutions. 
 The generator then allows one to perform importance sampling as $Z$ is a distribution where it is known how to produce samples i.e. a Gaussian distribution.
 
 In our case $P$ is the thermal distribution of interstellar dust across the sky.
