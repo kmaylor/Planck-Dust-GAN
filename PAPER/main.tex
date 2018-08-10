@@ -110,7 +110,8 @@ For the case of generating $N\times M$ pixel images a Deep Convolutional GAN (DC
 The generator then allows one to sample from $P$ as $Z$ is a distribution where it is known how to produce samples i.e. a Gaussian distribution.
 
 In our case $P$ is the thermal distribution of interstellar dust across the sky.
-A DCGAN allows us to generate simulations of dust intensity maps based on the actual measured distribution instead of relying on a particular set of assumptions. 
+A DCGAN allows us to generate simulations of dust intensity maps based on the actual measured distribution instead of relying on a particular set of assu
+mptions. 
 As we only have one sky to measure we are limited in our ability to measure samples from $P$ and instead focus on a subset of $P$, patches of sky with approximately 1\% coverage. 
 The primary reason for choosing 1\% versus some other size is this coverage reduces the computational power needed to develop a model while still covering angular scales of interest.
 
@@ -173,8 +174,7 @@ To determine if the generator produces samples that are statistically consistent
 
 In Figure \ref{fig:pix_int} we show the distribution of pixel intensities over the entire set of real maps and 1000 generated maps. We chose to use 1000 generated samples as the summary statistics for larger numbers of samples showed little difference. From Figure \ref{fig:pix_int} we see the generator has learned the distribution of pixel intensities and we find a KS p-value of \tbd. The largest discrepancy between the distributions appears at the tails and most predominantly at the higher intensities. This is to be expected as a generator will have more difficulty learning this region simply due to the low rate at which such pixels are seen during training. 
 
-$\it{move this}$
-Generally validation of a neural network's predictions or outputs is done against a subset of the training data to test if a model has overfit the data or generalized well. However we do not follow this practice for two reasons. First, we only have roughly 1000 images in our dataset, splitting this into a training and validation set would result in too few samples for either set. Second, the process of mapping portions of the sky to a Cartesian plane without overlap would leave portions of the full sky unsampled and significantly reduce the size of our dataset. We therefore rely on maps with some overlap. Even if we split this set into a training and validation set a significant amount of correlation would remain due to the overlap of the individual maps. We are then left with the task of showing the generated samples are not simply one-to-one copies of the input set. $\it{need to think about tests for this}$
+
 
 \begin{figure}
 \includegraphics[width = .5\textwidth]{HistPixIntensity.pdf}
@@ -205,6 +205,8 @@ The dust maps contain non-Gaussian information which is not captured by the firs
 \caption{The Minkowski functionals for the real and generated intensity maps. The dashed curves are the mean of the distribution and the solid curves mark the 68\% confidence intervals. The p-values for the individual $C_{\ell}$ bins range from \tbd to \tbd.}
 \label{fig:mink}
 \end{figure*}
+
+Generally validation of a neural network's predictions or outputs is done against a subset of the training data to test if a model has overfit the data or generalized well. However we do not follow this practice for three reasons. First, we only have roughly 1000 images in our dataset, splitting this into a training and validation set would result in too few samples for either set. Second, the process of mapping portions of the sky to a Cartesian plane without overlap would leave portions of the full sky unsampled and significantly reduce the size of our dataset. We therefore rely on maps with some overlap. Even if we split this set into a training and validation set a significant amount of correlation would remain due to the overlap of the individual maps. Finally, since we are not working with a classification problem we are not concerned about generalizing, we are trying to produce samples from a specific distribution. For a large enough data set the summary statistics for testing and validation sets would be the same, as they are drawn from the same distribution, and fitting the testing set well would automatically imply the validation set is also well fit. We are then left with the task of showing the generated samples are not simply one-to-one copies of the input set. This can be done by exploring the latent space for any hard transitions. We do this via the power spectra and find that drawing many samples does sufficiently fill the one sigma region.
 
  Finally in Figure \ref{fig:kshist} we show a histogram of all the KS p-values obtained from our tests. We conclude that our generator is able to produce sample maps from the desired dust intensity distribution. In the next section we discuss how these simulations may be used with a second neural network to separate the dust signal from the CMB at the map level.
  
