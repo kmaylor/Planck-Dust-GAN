@@ -106,17 +106,16 @@ A Generative Adversarial Network (GAN) is a form of unsupervised machine learnin
 A GAN consists of two sub-models, a discriminator and a generator, each with their own sets of weights that are to be optimized.
 The discriminator is optimized to detect samples from $P$, the distribution which we desire to emulate, and the generator is optimized to create samples from $P$.
 During the training process the discriminator is shown labeled samples from $P$ and from the generator, as the discriminator improves at detecting samples from $P$ the generator must improve at creating samples belonging to $P$ to minimize its own loss function. Training proceeds until the generator's output distribution has converged to $P$.
-For the case of generating $N\times M$ pixel images a Deep Convolutional GAN (DCGAN), first presented in \cite{radford15}, has proven to be effective. In this architecture the generator $\rm{G}(z)$ maps $z$, a random vector from $Z$, to $P$ in $\mathbb{R}^{N\times M}$ through a series of upsamplings via convolutions. 
-The generator then allows one to sample from $P$ as $Z$ is a distribution where it is known how to produce samples i.e. a Gaussian distribution.
+For the case of generating $N\times M$ pixel images a Deep Convolutional GAN (DCGAN), first presented in \cite{radford15}, has proven to be effective. In this architecture the generator $\rm{G}(z)$ maps $z$, a random vector from $Z$, to $P$ in $\mathbb{R}^{N\times M}$ through a series of upsamplings via strided convolutions. 
+The generator then allows one to sample from $P$ as $Z$ is chosen to be a distribution where it is known how to produce samples i.e. a Gaussian distribution.
 
 In our case $P$ is the thermal distribution of interstellar dust across the sky.
-A DCGAN allows us to generate simulations of dust intensity maps based on the actual measured distribution instead of relying on a particular set of assu
-mptions. 
+A DCGAN allows us to generate simulations of dust intensity maps based on the actual measured distribution instead of relying on a particular set of assumptions. 
 As we only have one sky to measure we are limited in our ability to measure samples from $P$ and instead focus on a subset of $P$, patches of sky with approximately 1\% coverage. 
 The primary reason for choosing 1\% versus some other size is this coverage reduces the computational power needed to develop a model while still covering angular scales of interest.
 
 \subsection{The Dataset}
-We formed our training dataset from the \planck\ 343GHz GNILC thermal dust map \citep{planck16-48}. The map was cut into overlapping patches of approximately 1\% sky coverage by selecting a $20^{\rm{o}} \times 20^{\rm{o}}$ region centered on a great circle (allowing us to use the flat sky approximation) using $\it{healpy}$ \citep{gorski05}.  One can envision our sampling process as shifting the center of a patch at a given longitude and latitude, $(\phi,\theta)$, to  $(\phi+s/cos(\theta),\theta+s)$, where $s$ is the step size,  and selecting a $20^{\rm{o}} \times 20^{\rm{o}}$ region centered on a great circle going through the new center. The factor of $1/cos(\theta)$ is included in the longitude step size to avoid over sampling of the poles. We also exclude the galactic plane by only sampling regions 15 degrees above and below the plane. This is done to ease convergence by reducing the dynamic range. For a more detailed analysis the galactic plane could be included. For $s=5$ we created roughly 1000 map cuts.  We chose a resolution of $900\times900$ pixels for each image to ensure good coverage when mapping the images back to the sphere, the average angular size of an individual pixel is less than two arcmin, which is also smaller than the \planck\ beam width. Before training we normalize the dataset to the range $[-1,1]$.
+We formed our training dataset from the \planck\ 343GHz GNILC thermal dust map \citep{planck16-48}. The map was cut into overlapping patches of approximately 1\% sky coverage by selecting a $20^{\rm{o}} \times 20^{\rm{o}}$ region centered on a great circle (allowing us to use the flat sky approximation) using $\it{healpy}$ \citep{gorski05}.  One can envision our sampling process as shifting the center of a patch at a given longitude and latitude, $(\phi,\theta)$, to  $(\phi+s/cos(\theta),\theta+s)$, where $s$ is the step size,  and selecting a $20^{\rm{o}} \times 20^{\rm{o}}$ region centered on a great circle going through the new center. The factor of $1/cos(\theta)$ is included in the longitude step size to avoid over sampling of the poles. We also exclude the galactic plane by only sampling regions 15 degrees above and below the plane. This is done to ease convergence by reducing the dynamic range of the temperature. For a more detailed analysis the galactic plane could be included. For $s=5$ we created roughly 1000 map cuts.  We chose a resolution of $900\times900$ pixels for each image to ensure good coverage when mapping the images back to the sphere. The average angular size of an individual pixel is less than two arcmin, which is smaller than the \planck\ beam width. Before training we normalize the dataset to the range $[-1,1]$.
 
 \subsection{Network Architecture}
 We base the architecture of our discriminator and generator on the guidelines presented in \cite{radford15} with several exceptions.
@@ -125,13 +124,8 @@ We found this method lead to better convergence in the generator by eliminating 
 The generator recieves a 64-dimensional vector drawn from $\mathcal{N}(0,1)$ as input, which is then processed through a densely connected layer and reshaped into \tbd $\tbd \times \tbd$ maps.
 This is followed by \tbd layers of upsampling and convolution which result in a single map.
 This map is then cut down to $900\times900$ pixels in the final layer. 
-At each layer in the generator we apply a LeakyReLU activation, with $\alpha = 0.2$, except in the final layer where we apply a hyperbolic-tangent (tanh) activation.
-We also apply Batch Normalization, with a momentum of 0.9, at each layer except the final one.
-
-For the discriminator we use the same number of feature maps. The upsampling and convolution steps in the generator are replaced by a convolution in the discriminator with a stride equal to the upsampling of the corresponding layer. For each convolution we again apply a LeakyReLU activation and Batch Normalization with the same alpha and momentum as in the generator. The feature maps are then flattened into a 1-dimensional vector and passed through a densely connected layer with a sigmoid activation function.
-
-\subsection{Training}
-For the discriminator we used a binary cross entropy loss function and the Adam optimizer with the learning rate set to $2\times10^{-4}$ and $\beta_1=0.5$. These are the same settings suggested in \cite{radford15}. We initialize the weights of the network from a truncated normal distribution with a standard deviation of 0.2. Training is done in batches of 32 maps. First the discriminator is trained on 16 real and 16 fake images (produced by the current state of the generator), the images' labels are also swapped with 1\% probability. Next the generator is trained on 32 real images and the current state of the discriminator is used to calculate the loss. We repeat this process until we have reached a desired level of convergence.
+After each linearity in the generator we apply a LeakyReLU activation, with $\alpha = 0.2$, except in the final layer where we apply a hyperbolic-tangent (tanh) activation.
+We also apply Batch Normalization, with a momentum of 0.9, after each activation layer except the final one. In Table \ref{tab:gan_layers} we list the structure of the generator.
 
 \begin{table}[ht]
 \centering
@@ -152,7 +146,7 @@ For the discriminator we used a binary cross entropy loss function and the Adam 
   Leaky ReLU & $120\times 120\times 64$ & $\alpha=0.2$ \\ 
   Batch Normalization & $120\times 120\times 64$ & $\rm{momentum} = 0.9$ \\  
   Up Sampling & $480\times 480\times 32$ & bi-linear \\ 
-  Convolution & $480\times 480\times 32$$ &  \\
+  Convolution & $480\times 480\times 32$ &  \\
   Leaky ReLU & $480\times 480\times 32$ & $\alpha=0.2$ \\ 
   Batch Normalization & $480\times 480\times 32$ & $\rm{momentum} = 0.9$ \\  
   Up Sampling & $960\times 960\times 1$ & bi-linear \\ 
@@ -165,7 +159,14 @@ For the discriminator we used a binary cross entropy loss function and the Adam 
 \label{tab:gan_layers}
 \end{table}
 
-In Table \ref{tab:gan_layers} we list the structure of the network.
+For the discriminator we use the same number of feature maps. The upsampling and convolution steps in the generator are replaced by a convolution in the discriminator with a stride equal to the upsampling of the corresponding layer. After each convolution we again apply a LeakyReLU activation and Batch Normalization with the same alpha and momentum as in the generator. The feature maps are then flattened into a 1-dimensional vector and passed through a densely connected layer with a sigmoid activation function.
+
+\subsection{Training}
+For the discriminator we used a binary cross entropy loss function and the Adam optimizer with the learning rate set to $2\times10^{-4}$ and $\beta_1=0.5$. These are the same settings suggested in \cite{radford15}. We initialize the weights of the network from a truncated normal distribution with a standard deviation of 0.2. Training is done in batches of 32 maps. First the discriminator is trained on 16 real and 16 fake images (produced by the current state of the generator), the images' labels are also swapped with 1\% probability. Next the generator is given 32 random noise vectors and the output from the generator is passed to the discriminator to calculate the loss. We repeat this process until we have reached a desired level of convergence.
+
+
+
+
 
 
 \section{Results}
@@ -206,7 +207,7 @@ The dust maps contain non-Gaussian information which is not captured by the firs
 \label{fig:mink}
 \end{figure*}
 
-Generally validation of a neural network's predictions or outputs is done against a subset of the training data to test if a model has overfit the data or generalized well. However we do not follow this practice for three reasons. First, we only have roughly 1000 images in our dataset, splitting this into a training and validation set would result in too few samples for either set. Second, the process of mapping portions of the sky to a Cartesian plane without overlap would leave portions of the full sky unsampled and significantly reduce the size of our dataset. We therefore rely on maps with some overlap. Even if we split this set into a training and validation set a significant amount of correlation would remain due to the overlap of the individual maps. Finally, since we are not working with a classification problem we are not concerned about generalizing, we are trying to produce samples from a specific distribution. For a large enough data set the summary statistics for testing and validation sets would be the same, as they are drawn from the same distribution, and fitting the testing set well would automatically imply the validation set is also well fit. We are then left with the task of showing the generated samples are not simply one-to-one copies of the input set. This can be done by exploring the latent space for any hard transitions. We do this via the power spectra and find that drawing many samples does sufficiently fill the one sigma region.
+Generally validation of a neural network's predictions or outputs is done against a subset of the training data to test if a model has overfit the data or generalized well. However we do not follow this practice for three reasons. First, we only have roughly 1000 images in our dataset, splitting this into a training and validation set would result in too few samples for either set. Second, the process of mapping portions of the sky to a Cartesian plane without overlap would leave portions of the full sky unsampled and significantly reduce the size of our dataset. We therefore rely on maps with some overlap. Even if we split this set into a training and validation set a significant amount of correlation would remain due to the overlap of the individual maps. Finally, since we are not working with a classification problem we are not concerned about generalizing, as we are trying to produce samples from a specific distribution and are not dealing with images drawn from several distinct distribtuions. For a large enough data set the summary statistics for testing and validation sets would be the same, as they are drawn from the same distribution, and fitting the testing set well would automatically imply the validation set is also well fit. We are then left with the task of showing the generated samples are not simply one-to-one copies of the input set. This can be done by exploring the latent space for any hard transitions. We do this via the power spectra and find that drawing many samples does sufficiently fill the one sigma region.
 
  Finally in Figure \ref{fig:kshist} we show a histogram of all the KS p-values obtained from our tests. We conclude that our generator is able to produce sample maps from the desired dust intensity distribution. In the next section we discuss how these simulations may be used with a second neural network to separate the dust signal from the CMB at the map level.
  
@@ -217,7 +218,6 @@ Generally validation of a neural network's predictions or outputs is done agains
 
 \section{Autoencoder for Component Separation}
 
-6:
 
 \section{Conclusions}
 
