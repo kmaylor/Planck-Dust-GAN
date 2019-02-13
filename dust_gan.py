@@ -1,54 +1,42 @@
 import numpy as np
 import h5py
-from KGAN.kgan import KGAN
+from KGAN.gans.dcgan import DCGAN as GAN
 
 
 
-
-class DustDCGAN(object):
-    def __init__(self,data,test=False,load_dir=None,save_dir='Saved_Models'):
-        
-        kernels = [8,8,8,4]
-        strides = [4,4,4,2]
-        depth=32
+     
+        #kernels = [4,4,4,4]
+        #strides =
+depth=32
         #kernels = [10,4,4]
         #strides = [10,4,2]
-        #kernels = [5,4,4,4]
-        #strides = [5,4,2,2]
-        if not test:
-            with h5py.File(data, 'r') as hf:
-                self.x_train = np.array([i for i in hf.values()]).reshape(-1, 900, 900, 1).astype(np.float32)
-            ##initialize the discriminator, adversarial models and the generator
-            self.KGAN = KGAN(strides=strides,kernels=kernels,img_rows=900,
-             img_cols=900, load_dir=load_dir,save_dir=save_dir,gpus = 4,depth=depth)
+kernels = [5,5,5,5]
+strides = [2,2,2,2]
+data = '/home/kmaylor/Cut_Maps/Planck_dust_cuts_353GHz_norm_log_res256.h5'
 
-            
-            #self.KGAN.depth_scale = [6,4,2,1][::-1]
-            
-        else:
-            ##initialize the discriminator, adversarial models and the generator
-            self.KGAN = KGAN(img_rows=600, img_cols=600, load_dir=None)
-            self.KGAN.strides = strides
-            self.KGAN.kernels = kernels
-            self.KGAN.depth_scale = [2,2,2,1][::-1]
-            print('Summary')
-            self.KGAN.discriminator()
-            self.KGAN.generator()
-            self.KGAN.discriminator_model()
-            self.KGAN.adversarial_model()
-            print('AM',self.KGAN.get_model_memory_usage(16,'AM'))
-            print('DM',self.KGAN.get_model_memory_usage(16,'DM'))
+img_rows = 256
+img_cols = 256
+channel = 1
+        
 
-    def train(self, train_steps=2000, save_interval=100, verbose = 10, batch_size=32):
-        self.KGAN.train(self.x_train, 'Gen_images/Dust_sims',train_steps=train_steps,
-         batch_size=batch_size, save_interval=save_interval, verbose = verbose)
 
+with h5py.File(data, 'r') as hf:
+    x_train=np.array([i for i in hf.values()]).reshape(-1, img_rows,img_cols, 1).astype(np.float32)
+
+
+dustGAN = GAN((img_rows,img_cols,channel),
+                        strides=strides,
+                        kernels=kernels,
+                        load_dir=None,
+                        min_depth=depth,
+                        save_dir = '/home/kmaylor/Saved_Models/WGAN_GP')
             
-    def gen_batch(batch_size):
-        batch=[]
-        with h5py.File('Planck_dust_cuts_353GHz_norm_log.h5', 'r') as hf:
-            for i in range(batch_size):
-                group = np.random.randint(0,len(hf.keys()))
-                map_group =  hf.get(str(group))
-                batch.append(map_group[np.random.randint(0,len(map_group))])
-        return np.array(batch).reshape(-1, self.img_rows, self.img_cols, 1).astype(np.float32)
+         
+dustGAN.train(x_train,
+              '/home/kmaylor/Gen_images/WGAN_GP_figures/dust'),
+              train_steps=50000,
+              batch_size=32,
+              save_rate=500,
+              mesg_rate = 100, 
+              train_rate=(5,1),
+             )
