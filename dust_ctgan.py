@@ -1,6 +1,6 @@
 import numpy as np
 import h5py
-from KGAN.gans.dcgan import DCGAN as GAN
+from KGAN.gans.ct_gan import CTGAN as GAN
 
 
 
@@ -29,11 +29,11 @@ dustGAN = GAN((img_rows,img_cols,channel),
                         kernels=kernels,
                         load_dir=None,
                         min_depth=depth,
-                        save_dir = '/home/kmaylor/Saved_Models/WGAN_GP')
+                        save_dir = '/home/kmaylor/Saved_Models/CT_GAN')
             
          
 dustGAN.train(x_train,
-              '/home/kmaylor/Gen_images/WGAN_GP_figures/dust',
+              '/home/kmaylor/Gen_images/CT_GAN_figures/dust',
               train_steps=50000,
               batch_size=32,
               save_rate=500,
