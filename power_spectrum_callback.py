@@ -8,16 +8,19 @@ import matplotlib.pyplot as plt
 
 class PSDCallback(object):
     
-    def __init__(self,real_images):
-
-        #with h5py.File(data_path, 'r') as hf:
-        #    real_images=np.array([i for i in hf.values()])
-        real_ps = []
-        for image in real_images[:,:,:,0]:
-            real_ps.append(self.calcSquareImagePSD(image))
-        self.average_real_ps = np.mean(np.array(real_ps),axis=0)
+    def __init__(self,real_images,statistic='ps'):
+        self.statistic=statistic
+        if statistic=='ps':
+            real_ps = []
+            for image in real_images[:,:,:,0]:
+                real_ps.append(self.calcSquareImagePSD(image))
+            self.average_real_ps = np.mean(np.array(real_ps),axis=0)
+            self.real_ps_cov = np.cov(np.array(real_ps),rowvar=False)
+        if statistic == 'hist':
+            (self.real_hist, _) = np.histogram(real_images[:,:,:,0], 25, range=[-1,1])
         self.neg_log_like = 1e30
-
+        self.beststep=0
+        self.step=0
     def getInterpolatedPixelValues(self,image, x, y):
 	    x = np.asarray(x)
 	    y = np.asarray(y)
@@ -81,26 +84,41 @@ class PSDCallback(object):
         return psd1d
     
     def gen_images(self,gan):
-        noise = np.random.normal(loc=0., scale=1., size=[100, gan.latent_dim])
+        noise = np.random.normal(loc=0., scale=1., size=[1000, gan.latent_dim])
         return gan.models['generator'].predict(noise)
     
     def __call__(self, gan):
-        
-        fake_images = self.gen_images(gan)[:,:,:,0]
-        fake_ps = []
-        for image in fake_images:
-            fake_ps.append(self.calcSquareImagePSD(image))
-        average_fake_ps = np.mean(np.array(fake_ps),axis=0)
-        fake_ps_cov = np.cov(np.array(fake_ps),rowvar=False)
-        diff = average_fake_ps-self.average_real_ps
-        chisq = sum(diff**2/np.diag(fake_ps_cov))
-        new_neg_log_like = chisq+np.sum(np.log(np.diag(fake_ps_cov)))
+        self.step+=100
+        if self.statistic=='ps':
+            fake_images = self.gen_images(gan)[:,:,:,0]
+            fake_ps = []
+            for image in fake_images:
+                fake_ps.append(self.calcSquareImagePSD(image))
+            average_fake_ps = np.mean(np.array(fake_ps),axis=0)
+            fake_ps_cov = np.cov(np.array(fake_ps),rowvar=False)
+            diff = average_fake_ps-self.average_real_ps
+            chisq = sum(diff**2/np.diag(fake_ps_cov+self.real_ps_cov))
+        elif (self.statistic=='hist'):# and (self.step>=20000):
+           fake_hists = []
+           for i in range(100):
+               fake_images = self.gen_images(gan)[:,:,:,0]
+               (fake_hist, _) = np.histogram(fake_images, 25, range=[-1,1])
+               fake_hists.append(fake_hist)
+           average_hist=np.mean(np.array(fake_hists),axis=0)
+           hist_cov = np.cov(np.array(fake_hists),rowvar=False)
+           diff = average_hist-self.real_hist
+           chisq = sum(diff**2/np.diag(hist_cov))
+        else:
+           chisq	 = 1e31
+        new_neg_log_like = chisq
         self.neg_log_like = np.min([new_neg_log_like,self.neg_log_like])
-        print('The Negative LogLikelihood is %f' % (new_neg_log_like))
+        
         if new_neg_log_like == self.neg_log_like:
+            self.beststep=self.step
+            
             if not os.path.exists(str(gan.save_dir)): os.makedirs(str(gan.save_dir))
             for k in ['discriminator','generator']:
                 gan.models[k].save(gan.save_dir+'/'+k+'_best_psd.h5')
-        
+        print('The Negative LogLikelihood is %f at step %f' % (self.neg_log_like,self.beststep))
     
     
