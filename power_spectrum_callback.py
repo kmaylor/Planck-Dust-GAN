@@ -17,7 +17,7 @@ class PSDCallback(object):
             self.average_real_ps = np.mean(np.array(real_ps),axis=0)
             self.real_ps_cov = np.cov(np.array(real_ps),rowvar=False)
         if statistic == 'hist':
-            (self.real_hist, _) = np.histogram(real_images[:,:,:,0], 25, range=[-1,1])
+            (self.real_hist, _) = np.histogram(real_images[:,:,:,0], 100, range=[-1,1])
         self.neg_log_like = 1e30
         self.beststep=0
         self.step=0
@@ -84,9 +84,15 @@ class PSDCallback(object):
         return psd1d
     
     def gen_images(self,gan):
-        noise = np.random.normal(loc=0., scale=1., size=[1000, gan.latent_dim])
+        noise = np.random.normal(loc=0., scale=1., size=[1034, gan.latent_dim])
         return gan.models['generator'].predict(noise)
     
+    def intersection(self,hist):
+        inter=[]
+        for i,h in enumerate(hist):
+            inter.append(np.min([h,self.real_hist[i]]))
+        return np.sum(inter)/np.sum(hist)
+
     def __call__(self, gan):
         self.step+=100
         if self.statistic=='ps':
@@ -97,17 +103,22 @@ class PSDCallback(object):
             average_fake_ps = np.mean(np.array(fake_ps),axis=0)
             fake_ps_cov = np.cov(np.array(fake_ps),rowvar=False)
             diff = average_fake_ps-self.average_real_ps
-            chisq = sum(diff**2/np.diag(fake_ps_cov+self.real_ps_cov))
+            chisq=sum(diff**2/self.average_real_ps)+np.sum((np.sqrt(np.diag(fake_ps_cov))-np.sqrt(np.diag(self.real_ps_cov)))**2/np.diag(self.real_ps_cov))
+            #chisq = sum(diff**2/np.diag(fake_ps_cov+self.real_ps_cov))
         elif (self.statistic=='hist'):# and (self.step>=20000):
-           fake_hists = []
-           for i in range(100):
+           #fake_hists = []
+           inters=[]
+           for i in range(10):
                fake_images = self.gen_images(gan)[:,:,:,0]
-               (fake_hist, _) = np.histogram(fake_images, 25, range=[-1,1])
-               fake_hists.append(fake_hist)
-           average_hist=np.mean(np.array(fake_hists),axis=0)
-           hist_cov = np.cov(np.array(fake_hists),rowvar=False)
-           diff = average_hist-self.real_hist
-           chisq = sum(diff**2/np.diag(hist_cov))
+               (fake_hist, _) = np.histogram(fake_images, 100, range=[-1,1])
+               inters.append(self.intersection(fake_hist))
+               #fake_hists.append(fake_hist)
+           #average_hist=np.mean(np.array(fake_hists),axis=0)
+           #hist_cov = np.cov(np.array(fake_hists),rowvar=False)
+           #diff = average_hist-self.real_hist
+           #chisq = sum(diff**2/np.diag(hist_cov))
+           avg_inter=np.min([1,np.mean(inters)])
+           chisq=1-avg_inter
         else:
            chisq	 = 1e31
         new_neg_log_like = chisq
