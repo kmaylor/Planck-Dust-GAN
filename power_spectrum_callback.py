@@ -1,6 +1,6 @@
 from scipy import fftpack
 import numpy as np
-from scipy.linalg import cho_factor, cho_solve, inv
+from scipy.linalg import cho_factor, cho_solve, inv, sqrtm
 import os
 import matplotlib
 matplotlib.use('Agg')
@@ -80,8 +80,8 @@ class PSDCallback(object):
         # Average azimuthally with ever-increasing radii starting at the center and towards the corners
         # This averages in a circle at the center of the image
         psd1d = self._azimuthalAverage(psd2d)
-    
-        return psd1d
+        ell = arange(len(psd1d))*9
+        return psd1d*ell*(ell+1)/2/np.pi*1e-10
     
     def gen_images(self,gan):
         noise = np.random.normal(loc=0., scale=1., size=[1034, gan.latent_dim])
@@ -103,8 +103,9 @@ class PSDCallback(object):
             average_fake_ps = np.mean(np.array(fake_ps),axis=0)
             fake_ps_cov = np.cov(np.array(fake_ps),rowvar=False)
             diff = average_fake_ps-self.average_real_ps
-            chisq=sum(diff**2/self.average_real_ps)+np.sum((np.sqrt(np.diag(fake_ps_cov))-np.sqrt(np.diag(self.real_ps_cov)))**2/np.diag(self.real_ps_cov))
-            #chisq = sum(diff**2/np.diag(fake_ps_cov+self.real_ps_cov))
+            
+            chisq=sum(diff**2)+np.trace(fake_ps_cov+self.real_ps_cov-2*sqrtm(np.matmul(fake_ps_cov,self.real_ps_cov)))
+            
         elif (self.statistic=='hist'):# and (self.step>=20000):
            #fake_hists = []
            inters=[]
